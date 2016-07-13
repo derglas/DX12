@@ -120,7 +120,9 @@ public:
 	void CopyCounter(GpuResource& Dest, size_t DestOffset, StructuredBuffer& Src);
 	void ResetCounter(StructuredBuffer& Buf, uint32_t Value = 0);
 
-	static void InitializeTexture( GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[] );
+	static void UpdateTexture(GpuResource& Dest, UINT FirstSubresource, UINT NumSubresources, D3D12_SUBRESOURCE_DATA* pSrcData);
+
+	static void InitializeTexture(GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA* pSrcData);
 	static void InitializeBuffer( GpuResource& Dest, const void* Data, size_t NumBytes , bool UseOffset = false, size_t Offset = 0);
 	static void InitializeTextureArraySlice(GpuResource& Dest, UINT SliceIndex, GpuResource& Src);
 

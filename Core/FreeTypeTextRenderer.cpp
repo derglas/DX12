@@ -98,6 +98,83 @@ namespace FreeTypeTextRenderer
 {
 	FT_Library s_Library;
 
+	class SheetTexture : public GpuResource
+	{
+		friend class CommandContext;
+
+	public:
+		SheetTexture()
+			: m_Format{ DXGI_FORMAT_UNKNOWN }
+			, m_Width{ 0 }
+			, m_Height{ 0 }
+		{
+			m_CpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+		}
+
+		void Create(UINT nWidth, UINT nHeight, DXGI_FORMAT Format)
+		{
+			m_UsageState = D3D12_RESOURCE_STATE_COMMON;
+			
+			m_Width = nWidth;
+			m_Height = nHeight;
+			m_Format = Format;
+
+			D3D12_RESOURCE_DESC TextureDesc = {};
+			TextureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			TextureDesc.Width = m_Width;
+			TextureDesc.Height = m_Height;
+			TextureDesc.DepthOrArraySize = 1;
+			TextureDesc.MipLevels = 1;
+			TextureDesc.Format = m_Format;
+			TextureDesc.SampleDesc.Count = 1;
+			TextureDesc.SampleDesc.Quality = 0;
+			TextureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			TextureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+			D3D12_HEAP_PROPERTIES HeapProps = {};
+			HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+			HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+			HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+			HeapProps.CreationNodeMask = 1;
+			HeapProps.VisibleNodeMask = 1;
+
+			ASSERT_SUCCEEDED(Graphics::g_Device->CreateCommittedResource(&HeapProps, 
+				D3D12_HEAP_FLAG_NONE, 
+				&TextureDesc,
+				m_UsageState, 
+				nullptr, 
+				MY_IID_PPV_ARGS(m_pResource.ReleaseAndGetAddressOf())));
+
+			m_pResource->SetName(L"DynamicArrayTexture");
+
+			if (m_CpuDescriptorHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+				m_CpuDescriptorHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			Graphics::g_Device->CreateShaderResourceView(m_pResource.Get(), nullptr, m_CpuDescriptorHandle);
+		}
+
+		void Destroy()
+		{
+			GpuResource::Destroy();
+			m_CpuDescriptorHandle.ptr = 0;
+		}
+
+		void Update(UINT nSheetIndex, const byte* pData)
+		{
+			D3D12_SUBRESOURCE_DATA SubResourceData;
+			SubResourceData.pData = pData;
+			SubResourceData.RowPitch = m_Width * BytesPerPixel(m_Format);
+			SubResourceData.SlicePitch = SubResourceData.RowPitch * m_Height;
+			CommandContext::UpdateTexture(*this, nSheetIndex, 1, &SubResourceData);
+		}
+
+		const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() const { return m_CpuDescriptorHandle; }
+
+	private:
+		D3D12_CPU_DESCRIPTOR_HANDLE	m_CpuDescriptorHandle;
+		DXGI_FORMAT m_Format;
+		UINT m_Width, m_Height;
+	};
+
 	class Font
 	{
 	public:
@@ -125,13 +202,11 @@ namespace FreeTypeTextRenderer
 		// 시트(텍스쳐) 사이즈
 		uint16_t GetSheetSize() const { return m_SheetSize; }
 
-		// 임시
-		const Texture& GetTexture() const { return m_Sheets.back().GetTexture(); }
+		// 텍스쳐
+		const SheetTexture& GetTexture() const { return m_Texture; }
 
-		class Sheet : public GpuResource
+		class Sheet
 		{
-			friend class CommandContext;
-
 		public:
 			Sheet(uint16_t nIndex, uint16_t nSize, uint16_t nRowHeight)
 				: m_Index{ nIndex }
@@ -142,23 +217,11 @@ namespace FreeTypeTextRenderer
 				, m_Dirty{ false }
 			{
 				m_Data = std::make_shared<std::vector<byte>>(std::vector<byte>(m_Size * m_Size, 0));
-				m_Texture.Create(m_Size, m_Size, GetTextureFormat(), m_Data->data());
 			}
 
 			uint16_t GetIndex() const { return m_Index; }
+			const byte*	GetData() const { return m_Data->data(); }
 			bool IsDirty() const { return m_Dirty;  }
-			const Texture& GetTexture() const { return m_Texture; }
-			DXGI_FORMAT GetTextureFormat() const { return DXGI_FORMAT_R8_UNORM; }
-
-			void Update()
-			{
-				D3D12_SUBRESOURCE_DATA TexResource;
-				TexResource.pData = m_Data->data();
-				TexResource.RowPitch = m_Size * BytesPerPixel(GetTextureFormat());
-				TexResource.SlicePitch = TexResource.RowPitch * m_Size;
-
-				CommandContext::InitializeTexture(m_Texture, 1, &TexResource);
-			}
 
 			bool PackGlyph(uint16_t nWidth, uint16_t nHeight, 
 				const byte* pBuffer, 
@@ -280,14 +343,8 @@ namespace FreeTypeTextRenderer
 			for (wchar_t c = 32; c < 127; ++c)
 				GetGlyph(c);
 
-
-
-			for (auto& iSheet : m_Sheets)
-			{
-				iSheet.Update();
-			}
-
-
+			m_Texture.Create(m_SheetSize, m_SheetSize, DXGI_FORMAT_R8_UNORM);
+			m_Texture.Update(0, m_Sheets.back().GetData());
 
 			return true;
 		}
@@ -370,6 +427,7 @@ namespace FreeTypeTextRenderer
 		uint16_t			m_SheetSize;
 		std::vector<Sheet>	m_Sheets;
 		std::map<wchar_t, Glyph>	m_Dictionary;
+		SheetTexture		m_Texture;
 	};
 
 	// 로드된 폰트

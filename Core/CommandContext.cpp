@@ -437,8 +437,62 @@ void CommandContext::FillBuffer( GpuResource& Dest, size_t DestOffset, DWParam V
 	CopyBufferRegion(Dest, DestOffset, TempSpace.Buffer, TempSpace.Offset, NumBytes );
 }
 
-void CommandContext::InitializeTexture( GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[] )
+void CommandContext::UpdateTexture(GpuResource& Dest, UINT FirstSubresource, UINT NumSubresources, D3D12_SUBRESOURCE_DATA* pSrcData)
 {
+	ID3D12Resource* UploadBuffer;
+	UINT64 UploadBufferSize = GetRequiredIntermediateSize(Dest.GetResource(),
+		FirstSubresource,
+		NumSubresources);
+
+	CommandContext& Context = CommandContext::Begin();
+
+	D3D12_HEAP_PROPERTIES HeapProps;
+	HeapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+	HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	HeapProps.CreationNodeMask = 1;
+	HeapProps.VisibleNodeMask = 1;
+
+	D3D12_RESOURCE_DESC BufferDesc;
+	BufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	BufferDesc.Alignment = 0;
+	BufferDesc.Width = UploadBufferSize;
+	BufferDesc.Height = 1;
+	BufferDesc.DepthOrArraySize = 1;
+	BufferDesc.MipLevels = 1;
+	BufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+	BufferDesc.SampleDesc.Count = 1;
+	BufferDesc.SampleDesc.Quality = 0;
+	BufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	BufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	ASSERT_SUCCEEDED(Graphics::g_Device->CreateCommittedResource(&HeapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&BufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		MY_IID_PPV_ARGS(&UploadBuffer)));
+
+	Context.TransitionResource(Dest, D3D12_RESOURCE_STATE_COPY_DEST, true);
+
+	UpdateSubresources(Context.m_CommandList,
+		Dest.GetResource(),
+		UploadBuffer,
+		0,
+		FirstSubresource,
+		NumSubresources,
+		pSrcData);
+
+	Context.TransitionResource(Dest, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+	Context.Finish(true);
+
+	UploadBuffer->Release();
+}
+
+void CommandContext::InitializeTexture(GpuResource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA* pSrcData)
+{
+#if 0
 	ID3D12Resource* UploadBuffer;
 
 	UINT64 uploadBufferSize = GetRequiredIntermediateSize(Dest.GetResource(), 0, NumSubresources);
@@ -478,6 +532,9 @@ void CommandContext::InitializeTexture( GpuResource& Dest, UINT NumSubresources,
 	InitContext.Finish(true);
 
 	UploadBuffer->Release();
+#else
+	UpdateTexture(Dest, 0, NumSubresources, pSrcData);
+#endif
 }
 
 void CommandContext::CopySubresource(GpuResource& Dest, UINT DestSubIndex, GpuResource& Src, UINT SrcSubIndex)

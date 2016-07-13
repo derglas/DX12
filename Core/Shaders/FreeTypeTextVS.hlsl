@@ -17,7 +17,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
 	float4 Pos : SV_POSITION;
-	float2 Tex : TEXCOORD0;
+	float3 Tex : TEXCOORD0;
 };
 
 [RootSignature(Text_RootSig)]
@@ -32,7 +32,8 @@ VS_OUTPUT main(VS_INPUT Input, uint VertID : SV_VertexID)
 
 	VS_OUTPUT Output;
 	Output.Pos = float4(lerp(Pos0, Pos1, Factor) * Scale + Offset, 0, 1);
-	Output.Tex = lerp(Tex0, Tex1, Factor) * InvTexSize;
+	Output.Tex.xy = lerp(Tex0, Tex1, Factor) * InvTexSize;
+	Output.Tex.z = Input.Glyph.w;
 
 	return Output;
 }
