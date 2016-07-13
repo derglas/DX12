@@ -604,6 +604,7 @@ void EngineTuning::Display( GraphicsContext& Context, float x, float y, float w,
 {
 	GraphRenderer::RenderGraphs(Context, GraphRenderer::GraphType::Profile);
 
+#if 1
 	{
 		FreeTypeTextContext Text(Context, w, h);
 		Text.Begin();
@@ -615,6 +616,7 @@ void EngineTuning::Display( GraphicsContext& Context, float x, float y, float w,
 
 		Text.End();
 	}
+#endif // 0
 
 	TextContext Text(Context);
 	Text.Begin();

@@ -353,7 +353,7 @@ namespace FreeTypeTextRenderer
 				return false;
 
 			// 사이즈 세팅
-			FT_UInt nResolution = 100;
+			FT_UInt nResolution = 96;
 			Err = FT_Set_Char_Size(m_Face, (uint32_t)nFontSize << 6, 0, nResolution, 0);
 			if (Err != 0)
 				return false;
@@ -376,7 +376,7 @@ namespace FreeTypeTextRenderer
 			if (Found != m_Dictionary.end())
 				return &Found->second;
 
-			FT_Error Err = FT_Load_Char(m_Face, c, FT_LOAD_RENDER);
+			FT_Error Err = FT_Load_Char(m_Face, c, FT_LOAD_RENDER | FT_LOAD_TARGET_NORMAL);
 			if (Err != 0)
 				return nullptr;
 
@@ -482,7 +482,7 @@ namespace FreeTypeTextRenderer
 		if (Found != s_LoadedFonts.end())
 			return Found->second.get();
 
-		const uint16_t nSheetSize = 128;
+		const uint16_t nSheetSize = 512;
 		Font* pFont = new Font(nSheetSize);
 		if (pFont->Load(FileName, FontSize) == false)
 		{
