@@ -98,6 +98,7 @@ namespace FreeTypeTextRenderer
 {
 	FT_Library s_Library;
 
+	class Font;
 	class SheetTexture : public GpuResource
 	{
 		friend class CommandContext;
@@ -107,23 +108,27 @@ namespace FreeTypeTextRenderer
 			: m_Format{ DXGI_FORMAT_UNKNOWN }
 			, m_Width{ 0 }
 			, m_Height{ 0 }
+			, m_ArraySize{ 0 }
 		{
 			m_CpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
 		}
 
-		void Create(UINT nWidth, UINT nHeight, DXGI_FORMAT Format)
+		void Create(UINT nWidth, UINT nHeight, DXGI_FORMAT Format, UINT nArraySize = 1)
 		{
+			GpuResource::Destroy();
+
 			m_UsageState = D3D12_RESOURCE_STATE_COMMON;
 			
 			m_Width = nWidth;
 			m_Height = nHeight;
 			m_Format = Format;
+			m_ArraySize = nArraySize;
 
 			D3D12_RESOURCE_DESC TextureDesc = {};
 			TextureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 			TextureDesc.Width = m_Width;
 			TextureDesc.Height = m_Height;
-			TextureDesc.DepthOrArraySize = 1;
+			TextureDesc.DepthOrArraySize = m_ArraySize;
 			TextureDesc.MipLevels = 1;
 			TextureDesc.Format = m_Format;
 			TextureDesc.SampleDesc.Count = 1;
@@ -169,14 +174,19 @@ namespace FreeTypeTextRenderer
 
 		const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() const { return m_CpuDescriptorHandle; }
 
+		UINT GetArraySize() const { return m_ArraySize; }
+
 	private:
 		D3D12_CPU_DESCRIPTOR_HANDLE	m_CpuDescriptorHandle;
 		DXGI_FORMAT m_Format;
 		UINT m_Width, m_Height;
+		UINT m_ArraySize;
 	};
 
 	class Font
 	{
+		friend class SheetTexture;
+
 	public:
 		Font(uint16_t nSheetSize = 1024) : m_SheetSize{ nSheetSize }
 			, m_MaxHeight{ 0 }
@@ -220,8 +230,6 @@ namespace FreeTypeTextRenderer
 			}
 
 			uint16_t GetIndex() const { return m_Index; }
-			const byte*	GetData() const { return m_Data->data(); }
-			bool IsDirty() const { return m_Dirty;  }
 
 			bool PackGlyph(uint16_t nWidth, uint16_t nHeight, 
 				const byte* pBuffer, 
@@ -259,6 +267,20 @@ namespace FreeTypeTextRenderer
 				m_Dirty = true;
 
 				return true;
+			}
+
+			bool Update(SheetTexture& Texture, bool bForce)
+			{
+				if (bForce || m_Dirty)
+				{
+					Texture.Update((UINT)m_Index, m_Data->data());
+					m_Dirty = false;
+					return true;
+				}
+				else
+				{
+					return false;
+				}
 			}
 			
 		private:
@@ -337,14 +359,13 @@ namespace FreeTypeTextRenderer
 				return false;
 
 			m_MaxHeight = (uint16_t)(m_Face->size->metrics.height >> 6);
-			m_LineHeight = m_Face->height >> 6;
+			m_LineHeight = (uint16_t)((m_Face->size->metrics.ascender - m_Face->size->metrics.descender) >> 6);
 
 			// 기본 문자 미리 추가
 			for (wchar_t c = 32; c < 127; ++c)
 				GetGlyph(c);
 
-			m_Texture.Create(m_SheetSize, m_SheetSize, DXGI_FORMAT_R8_UNORM);
-			m_Texture.Update(0, m_Sheets.back().GetData());
+			UpdateSheets();
 
 			return true;
 		}
@@ -393,6 +414,28 @@ namespace FreeTypeTextRenderer
 			return &Inserted.first->second;
 		}
 
+		bool UpdateSheets()
+		{
+			if (m_Texture.GetArraySize() != (UINT)m_Sheets.size())
+			{
+				m_Texture.Create(m_SheetSize, m_SheetSize, DXGI_FORMAT_R8_UNORM, (UINT)m_Sheets.size());
+				for (auto& iSheet : m_Sheets)
+				{
+					iSheet.Update(m_Texture, true);
+				}
+				return true;
+			}
+			else
+			{
+				bool Dirty = false;
+				for (auto& iSheet : m_Sheets)
+				{
+					Dirty = iSheet.Update(m_Texture, false);
+				}
+				return Dirty;
+			}
+		}
+
 	private:
 		Sheet* AddSheet()
 		{
@@ -439,7 +482,7 @@ namespace FreeTypeTextRenderer
 		if (Found != s_LoadedFonts.end())
 			return Found->second.get();
 
-		const uint16_t nSheetSize = 1024;
+		const uint16_t nSheetSize = 128;
 		Font* pFont = new Font(nSheetSize);
 		if (pFont->Load(FileName, FontSize) == false)
 		{
@@ -519,7 +562,7 @@ void FreeTypeTextContext::ResetSettings()
 	m_DirtyPSParams = true;
 	m_DirtyTexture = true;
 
-	SetFont(L"Fonts/consola.ttf", 16);
+	SetFont(L"Fonts/NanumGothicBold.ttf", 16);
 }
 
 void FreeTypeTextContext::NewLine()
@@ -601,6 +644,8 @@ void FreeTypeTextContext::SetRenderState()
 {
 	WARN_ONCE_IF(nullptr == m_CurFont, "Attempted to draw text without a font");
 
+	m_DirtyTexture |= m_CurFont->UpdateSheets();
+
 	if (m_DirtyVSParams)
 	{
 		m_Context.SetDynamicConstantBufferView(0, sizeof(m_VSParams), &m_VSParams);
@@ -666,13 +711,15 @@ UINT FreeTypeTextContext::FillVertexBuffer(TextVert volatile* Vertices, const wc
 	return nCharsDrawn;
 }
 
+#include <locale>
+
 void FreeTypeTextContext::DrawString(const std::wstring& Str)
 {
-	SetRenderState();
-
 	void* pStackMem = _malloca((Str.size() + 1) * 16);
 	TextVert* Vertices = Math::AlignUp((TextVert*)pStackMem, 16);
 	UINT nPrimCount = FillVertexBuffer(Vertices, Str.c_str(), Str.size());
+
+	SetRenderState();
 
 	if (nPrimCount > 0)
 	{

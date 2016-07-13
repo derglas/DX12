@@ -609,7 +609,9 @@ void EngineTuning::Display( GraphicsContext& Context, float x, float y, float w,
 		Text.Begin();
 
 		Text.ResetCursor(100, 100);
-		Text.DrawString(L"ABCDEFGabcdefgijkl");
+		Text.DrawString(L"You can use bookmarks to mark lines in your code so that you can quickly return to a specific location and jump back and forth between locations.\n"
+			L"Bookmark commands and icons are available in two places : the bookmark window(View / Bookmark Window) and the text editor toolbar.\n"
+			L"(서울=연합뉴스) 이정진 기자 = 한미 군 당국이 경북 성주에 미국의 고고도 미사일방어체계(THAAD·사드)를 배치한다고 결정한 것은 군사적 효용성은 물론이고 주민안전과 중국의 반발 등까지 두루 고려한 조치로 풀이된다.");
 
 		Text.End();
 	}
