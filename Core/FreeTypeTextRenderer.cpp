@@ -562,7 +562,7 @@ void FreeTypeTextContext::ResetSettings()
 	m_DirtyPSParams = true;
 	m_DirtyTexture = true;
 
-	SetFont(L"Fonts/NanumGothicBold.ttf", 16);
+	SetFont(L"Fonts/NanumGothicBold.ttf", 16); 
 }
 
 void FreeTypeTextContext::NewLine()
@@ -711,8 +711,6 @@ UINT FreeTypeTextContext::FillVertexBuffer(TextVert volatile* Vertices, const wc
 	return nCharsDrawn;
 }
 
-#include <locale>
-
 void FreeTypeTextContext::DrawString(const std::wstring& Str)
 {
 	void* pStackMem = _malloca((Str.size() + 1) * 16);
@@ -730,12 +728,28 @@ void FreeTypeTextContext::DrawString(const std::wstring& Str)
 	_freea(pStackMem);
 }
 
+void FreeTypeTextContext::DrawString(const std::string& Str)
+{
+	std::wstring WStr;
+	WStr.assign(Str.begin(), Str.end());
+	DrawString(WStr);
+}
+
 void FreeTypeTextContext::DrawFormattedString(const wchar_t* Format, ...)
 {
 	wchar_t Buffer[512];
 	va_list Args;
 	va_start(Args, Format);
-	vswprintf(Buffer, 256, Format, Args);
+	vswprintf(Buffer, 512, Format, Args);
 	DrawString(std::wstring(Buffer));
+}
+
+void FreeTypeTextContext::DrawFormattedString(const char* Format, ...)
+{
+	char Buffer[512];
+	va_list Args;
+	va_start(Args, Format);
+	vsprintf_s(Buffer, 512, Format, Args);
+	DrawString(std::string(Buffer));
 }
 #endif

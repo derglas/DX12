@@ -12,6 +12,7 @@
 //
 
 #include "GraphicsCore.h"
+#include "FreeTypeTextRenderer.h"
 
 namespace GraphRenderer
 {
@@ -21,12 +22,12 @@ namespace GraphRenderer
 	enum class GraphType { Global, Profile };
 	typedef uint32_t GraphHandle;
 
-	bool ManageGraphs( GraphHandle graphID, GraphType Type );
-	GraphHandle InitGraph( GraphType Type );
-	Color GetGraphColor( GraphHandle GraphID, GraphType Type);
-	XMFLOAT4 GetMaxAvg( GraphType Type );
-	void Update( XMFLOAT2 InputNode, GraphHandle GraphID, bool IsGraphed, GraphType Type);
-	void RenderGraphs( GraphicsContext& Context, GraphType Type );
+	bool ManageGraphs(GraphHandle graphID, GraphType Type);
+	GraphHandle InitGraph(GraphType Type);
+	Color GetGraphColor(GraphHandle GraphID, GraphType Type);
+	XMFLOAT4 GetMaxAvg(GraphType Type);
+	void Update(XMFLOAT2 InputNode, GraphHandle GraphID, bool IsGraphed, GraphType Type);
+	void RenderGraphs(GraphicsContext& Context, FreeTypeTextContext& Text, GraphType Type);
 
 	void SetSelectedIndex(uint32_t selectedIndex);
 

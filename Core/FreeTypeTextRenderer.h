@@ -46,7 +46,9 @@ public:
 
 	// 텍스트 렌더링
 	void DrawString(const std::wstring& Str);
+	void DrawString(const std::string& Str);
 	void DrawFormattedString(const wchar_t* Format, ...);
+	void DrawFormattedString(const char* Format, ...);
 
 private:
 	__declspec(align(16)) struct VertexShaderParams

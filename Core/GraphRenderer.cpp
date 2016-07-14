@@ -282,7 +282,7 @@ namespace
 //
 //---------------------------------------------------------------------
 
-static void DrawGraphHeaders(TextContext& Text, float leftMargin, float topMargin, float offsetY, float graphHeight, float* MinArray, 
+static void DrawGraphHeaders(FreeTypeTextContext& Text, float leftMargin, float topMargin, float offsetY, float graphHeight, float* MinArray, 
 	float* MaxArray, float* PresetMaxArray, bool GlobalScale,  uint32_t numDebugVar, std::string* graphTitles);
 
 
@@ -387,14 +387,16 @@ void GraphRenderer::Update( XMFLOAT2 InputNode, GraphHandle GraphID, bool IsGrap
 	}	
 }
 
-void DrawGraphHeaders(TextContext& Text, float leftMargin, float topMargin, float offsetY, float graphHeight, float* MinArray,
+void DrawGraphHeaders(FreeTypeTextContext& Text, float leftMargin, float topMargin, float offsetY, float graphHeight, float* MinArray,
 	float* MaxArray, float* PresetMaxArray, bool GlobalScale, uint32_t numDebugVar, std::string* graphTitles)
 {		
 	XMFLOAT2 textSpaceY = XMFLOAT2(0.02f * graphHeight, 0.067f * graphHeight); //top and bottom text space
 	textSpaceY.y = graphHeight - topMargin - textSpaceY.x * 3.0f;
 	float textSpaceX = 45.f;
 	Text.SetColor(Color(1.0f, 1.0f, 1.0f));
+#if 0
 	Text.SetTextSize(12.0f);
+#endif
 		
 	float min = MinArray[0];
 	float max = MaxArray[0];
@@ -425,7 +427,7 @@ void DrawGraphHeaders(TextContext& Text, float leftMargin, float topMargin, floa
 	}
 }
 
-void GraphRenderer::RenderGraphs(GraphicsContext& Context, GraphType Type)
+void GraphRenderer::RenderGraphs(GraphicsContext& Context, FreeTypeTextContext& Text, GraphType Type)
 {
 	if (Type == GraphType::Global && GlobalGraphs.Size() == 0 ||
 		Type == GraphType::Profile && ProfileGraphs.Size() == 0)
@@ -433,9 +435,6 @@ void GraphRenderer::RenderGraphs(GraphicsContext& Context, GraphType Type)
 		s_FrameID++; // probably need to reset this after time = uint32_t max val
 		return;
 	}
-
-	TextContext Text(Context);
-	Text.Begin();
 
 	if (Type == GraphType::Profile && ProfileGraphs.GetActiveGraphCount() > 0)
 	{
@@ -507,7 +506,7 @@ void GraphRenderer::RenderGraphs(GraphicsContext& Context, GraphType Type)
 		}
 	}
 	s_FrameID++;
-	Text.End();
+	
 	Context.SetViewport(0, 0, 1920, 1080);
 }
 

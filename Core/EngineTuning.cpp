@@ -40,8 +40,8 @@ namespace EngineTuning
 	float s_ScrollBottomTrigger = 1080.0f * 0.8f;
 
 	// Internal functions
-	void AddToVariableGraph( const string& path, EngineVar& var );
-	void RegisterVariable( const string& path, EngineVar& var );
+	void AddToVariableGraph(const string& path, EngineVar& var);
+	void RegisterVariable(const string& path, EngineVar& var);
 
 	EngineVar* sm_SelectedVariable = nullptr;
 	bool sm_IsVisible = false;
@@ -53,36 +53,36 @@ class VariableGroup : public EngineVar
 public:
 	VariableGroup() : m_IsExpanded(false) {}
 
-	EngineVar* FindChild( const string& name )
+	EngineVar* FindChild(const string& name)
 	{
 		auto iter = m_Children.find(name);
 		return iter == m_Children.end() ? nullptr : iter->second;
 	}
-	 
-	void AddChild( const string& name, EngineVar& child )
+
+	void AddChild(const string& name, EngineVar& child)
 	{
 		m_Children[name] = &child;
 		child.m_GroupPtr = this;
 	}
 
-	void Display( TextContext& Text, float leftMargin, EngineVar* highlightedTweak );
+	void Display(FreeTypeTextContext& Text, float leftMargin, EngineVar* highlightedTweak);
 
-	void SaveToFile( FILE* file, int fileMargin );
-	void LoadSettingsFromFile( FILE* file );
+	void SaveToFile(FILE* file, int fileMargin);
+	void LoadSettingsFromFile(FILE* file);
 
-	EngineVar* NextVariable( EngineVar* currentVariable );
-	EngineVar* PrevVariable( EngineVar* currentVariable );
-	EngineVar* FirstVariable( void );
-	EngineVar* LastVariable( void );
+	EngineVar* NextVariable(EngineVar* currentVariable);
+	EngineVar* PrevVariable(EngineVar* currentVariable);
+	EngineVar* FirstVariable(void);
+	EngineVar* LastVariable(void);
 
-	bool IsExpanded( void ) const { return m_IsExpanded; }
+	bool IsExpanded(void) const { return m_IsExpanded; }
 
-	virtual void Increment( void ) override { m_IsExpanded = true; }
-	virtual void Decrement( void ) override { m_IsExpanded = false; }
-	virtual void Bang( void ) override { m_IsExpanded = !m_IsExpanded; }
+	virtual void Increment(void) override { m_IsExpanded = true; }
+	virtual void Decrement(void) override { m_IsExpanded = false; }
+	virtual void Bang(void) override { m_IsExpanded = !m_IsExpanded; }
 
-	virtual void SetValue( FILE*, const std::string& ) override {}
-	
+	virtual void SetValue(FILE*, const std::string&) override {}
+
 	static VariableGroup sm_RootGroup;
 
 private:
@@ -95,22 +95,22 @@ VariableGroup VariableGroup::sm_RootGroup;
 //=====================================================================================================================
 // VariableGroup implementation
 
-void VariableGroup::Display( TextContext& Text, float leftMargin, EngineVar* highlightedTweak )
+void VariableGroup::Display(FreeTypeTextContext& Text, float leftMargin, EngineVar* highlightedTweak)
 {
 	Text.SetLeftMargin(leftMargin);
 	Text.SetCursorX(leftMargin);
 
 	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 	{
-		
+
 		if (iter->second == highlightedTweak)
 		{
-			Text.SetColor( Color(1.0f, 1.0f, 0.25f) );
+			Text.SetColor(Color(1.0f, 1.0f, 0.25f));
 			float temp1 = Text.GetCursorY() - EngineTuning::s_ScrollBottomTrigger;
 			float temp2 = Text.GetCursorY() - EngineTuning::s_ScrollTopTrigger;
 			if (temp1 > 0.0f)
 			{
-				EngineTuning::s_ScrollOffset += 0.2f * temp1; 
+				EngineTuning::s_ScrollOffset += 0.2f * temp1;
 			}
 			else if (temp2 < 0.0f)
 			{
@@ -118,7 +118,7 @@ void VariableGroup::Display( TextContext& Text, float leftMargin, EngineVar* hig
 			}
 		}
 		else
-			Text.SetColor( Color(1.0f, 1.0f, 1.0f) );
+			Text.SetColor(Color(1.0f, 1.0f, 1.0f));
 
 		VariableGroup* subGroup = dynamic_cast<VariableGroup*>(iter->second);
 		if (subGroup != nullptr)
@@ -130,7 +130,7 @@ void VariableGroup::Display( TextContext& Text, float leftMargin, EngineVar* hig
 			}
 			else
 			{
-				Text.DrawString("+ ");				
+				Text.DrawString("+ ");
 			}
 			Text.DrawString(iter->first);
 			Text.DrawString("/...\n");
@@ -141,21 +141,21 @@ void VariableGroup::Display( TextContext& Text, float leftMargin, EngineVar* hig
 				Text.SetLeftMargin(leftMargin);
 				Text.SetCursorX(leftMargin);
 			}
-			
+
 		}
 		else
 		{
-			
+
 			iter->second->DisplayValue(Text);
 			Text.SetCursorX(leftMargin + 200.0f);
 			Text.DrawString(iter->first);
 			Text.NewLine();
 		}
-		
+
 	}
 }
 
-void VariableGroup::SaveToFile( FILE* file, int fileMargin )
+void VariableGroup::SaveToFile(FILE* file, int fileMargin)
 {
 	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 	{
@@ -163,18 +163,18 @@ void VariableGroup::SaveToFile( FILE* file, int fileMargin )
 
 		VariableGroup* subGroup = dynamic_cast<VariableGroup*>(iter->second);
 		if (subGroup != nullptr)
-		{		
+		{
 			fprintf(file, "%*c + %s ...\r\n", fileMargin, ' ', buffer);
 			subGroup->SaveToFile(file, fileMargin + 5);
 		}
 		else if (dynamic_cast<CallbackTrigger*>(iter->second) == nullptr)
 		{
 			fprintf(file, "%*c %s:  %s\r\n", fileMargin, ' ', buffer, iter->second->ToString().c_str());
-		}		
+		}
 	}
 }
 
-void VariableGroup::LoadSettingsFromFile( FILE* file )
+void VariableGroup::LoadSettingsFromFile(FILE* file)
 {
 	for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 	{
@@ -186,18 +186,18 @@ void VariableGroup::LoadSettingsFromFile( FILE* file )
 			subGroup->LoadSettingsFromFile(file);
 		}
 		else
-		{	
+		{
 			iter->second->SetValue(file, iter->first);
 		}
 	}
 }
 
-EngineVar* VariableGroup::FirstVariable( void )
+EngineVar* VariableGroup::FirstVariable(void)
 {
 	return m_Children.size() == 0 ? nullptr : m_Children.begin()->second;
 }
 
-EngineVar* VariableGroup::LastVariable( void )
+EngineVar* VariableGroup::LastVariable(void)
 {
 	if (m_Children.size() == 0)
 		return this;
@@ -212,7 +212,7 @@ EngineVar* VariableGroup::LastVariable( void )
 	return LastVariable->second;
 }
 
-EngineVar* VariableGroup::NextVariable( EngineVar* curVar )
+EngineVar* VariableGroup::NextVariable(EngineVar* curVar)
 {
 	auto iter = m_Children.begin();
 	for (; iter != m_Children.end(); ++iter)
@@ -221,7 +221,7 @@ EngineVar* VariableGroup::NextVariable( EngineVar* curVar )
 			break;
 	}
 
-	ASSERT( iter != m_Children.end(), "Did not find engine variable in its designated group" );
+	ASSERT(iter != m_Children.end(), "Did not find engine variable in its designated group");
 
 	auto nextIter = iter;
 	++nextIter;
@@ -232,7 +232,7 @@ EngineVar* VariableGroup::NextVariable( EngineVar* curVar )
 		return nextIter->second;
 }
 
-EngineVar* VariableGroup::PrevVariable( EngineVar* curVar )
+EngineVar* VariableGroup::PrevVariable(EngineVar* curVar)
 {
 	auto iter = m_Children.begin();
 	for (; iter != m_Children.end(); ++iter)
@@ -241,7 +241,7 @@ EngineVar* VariableGroup::PrevVariable( EngineVar* curVar )
 			break;
 	}
 
-	ASSERT( iter != m_Children.end(), "Did not find engine variable in its designated group" );
+	ASSERT(iter != m_Children.end(), "Did not find engine variable in its designated group");
 
 	if (iter == m_Children.begin())
 		return this;
@@ -259,17 +259,17 @@ EngineVar* VariableGroup::PrevVariable( EngineVar* curVar )
 //=====================================================================================================================
 // EngineVar implementations
 
-EngineVar::EngineVar( void ) : m_GroupPtr(nullptr)
+EngineVar::EngineVar(void) : m_GroupPtr(nullptr)
 {
 }
 
-EngineVar::EngineVar( const std::string& path ) : m_GroupPtr(nullptr)
+EngineVar::EngineVar(const std::string& path) : m_GroupPtr(nullptr)
 {
 	EngineTuning::RegisterVariable(path, *this);
 }
 
 
-EngineVar* EngineVar::NextVar( void )
+EngineVar* EngineVar::NextVar(void)
 {
 	EngineVar* next = nullptr;
 	VariableGroup* isGroup = dynamic_cast<VariableGroup*>(this);
@@ -282,7 +282,7 @@ EngineVar* EngineVar::NextVar( void )
 	return next != nullptr ? next : this;
 }
 
-EngineVar* EngineVar::PrevVar( void )
+EngineVar* EngineVar::PrevVar(void)
 {
 	EngineVar* prev = m_GroupPtr->PrevVariable(this);
 	if (prev != nullptr && prev != m_GroupPtr)
@@ -294,24 +294,24 @@ EngineVar* EngineVar::PrevVar( void )
 	return prev != nullptr ? prev : this;
 }
 
-BoolVar::BoolVar( const std::string& path, bool val )
+BoolVar::BoolVar(const std::string& path, bool val)
 	: EngineVar(path)
 {
 	m_Flag = val;
 }
 
-void BoolVar::DisplayValue( TextContext& Text ) const
+void BoolVar::DisplayValue(FreeTypeTextContext& Text) const
 {
 	Text.DrawFormattedString("[%c]", m_Flag ? 'X' : '-');
 }
 
-std::string BoolVar::ToString( void ) const
+std::string BoolVar::ToString(void) const
 {
 	return m_Flag ? "on" : "off";
-} 
+}
 
 void BoolVar::SetValue(FILE* file, const std::string& setting)
-{	
+{
 	std::string pattern = "\n " + setting + ": %s";
 	char valstr[6];
 
@@ -323,10 +323,10 @@ void BoolVar::SetValue(FILE* file, const std::string& setting)
 		0 == _stricmp(valstr, "1") ||
 		0 == _stricmp(valstr, "on") ||
 		0 == _stricmp(valstr, "yes") ||
-		0 == _stricmp(valstr, "true") );
+		0 == _stricmp(valstr, "true"));
 }
 
-NumVar::NumVar( const std::string& path, float val, float minVal, float maxVal, float stepSize )
+NumVar::NumVar(const std::string& path, float val, float minVal, float maxVal, float stepSize)
 	: EngineVar(path)
 {
 	ASSERT(minVal <= maxVal);
@@ -336,39 +336,39 @@ NumVar::NumVar( const std::string& path, float val, float minVal, float maxVal, 
 	m_StepSize = stepSize;
 }
 
-void NumVar::DisplayValue( TextContext& Text ) const
+void NumVar::DisplayValue(FreeTypeTextContext& Text) const
 {
 	Text.DrawFormattedString("%-11f", m_Value);
 }
 
-std::string NumVar::ToString( void ) const
+std::string NumVar::ToString(void) const
 {
 	char buf[128];
 	sprintf_s(buf, "%f", m_Value);
 	return buf;
-} 
+}
 
-void NumVar::SetValue(FILE* file, const std::string& setting) 
+void NumVar::SetValue(FILE* file, const std::string& setting)
 {
 	std::string scanString = "\n" + setting + ": %f";
 	float valueRead;
-	
+
 	//If we haven't read correctly, just keep m_Value at default value
 	if (fscanf_s(file, scanString.c_str(), &valueRead))
-		*this = valueRead; 
+		*this = valueRead;
 }
 
 #if _MSC_VER < 1800
-__forceinline float log2( float x ) { return log(x) / log(2.0f); }
-__forceinline float exp2( float x ) { return pow(2.0f, x); }
+__forceinline float log2(float x) { return log(x) / log(2.0f); }
+__forceinline float exp2(float x) { return pow(2.0f, x); }
 #endif
 
-ExpVar::ExpVar( const std::string& path, float val, float minExp, float maxExp, float expStepSize )
+ExpVar::ExpVar(const std::string& path, float val, float minExp, float maxExp, float expStepSize)
 	: NumVar(path, log2(val), minExp, maxExp, expStepSize)
 {
 }
 
-ExpVar& ExpVar::operator=( float val )
+ExpVar& ExpVar::operator=(float val)
 {
 	m_Value = Clamp(log2(val));
 	return *this;
@@ -379,29 +379,29 @@ ExpVar::operator float() const
 	return exp2(m_Value);
 }
 
-void ExpVar::DisplayValue( TextContext& Text ) const
+void ExpVar::DisplayValue(FreeTypeTextContext& Text) const
 {
 	Text.DrawFormattedString("%-11f", (float)*this);
 }
 
-std::string ExpVar::ToString( void ) const
+std::string ExpVar::ToString(void) const
 {
 	char buf[128];
 	sprintf_s(buf, "%f", (float)*this);
 	return buf;
-} 
+}
 
-void ExpVar::SetValue(FILE* file, const std::string& setting) 
+void ExpVar::SetValue(FILE* file, const std::string& setting)
 {
 	std::string scanString = "\n" + setting + ": %f";
 	float valueRead;
-	
+
 	//If we haven't read correctly, just keep m_Value at default value
 	if (fscanf_s(file, scanString.c_str(), &valueRead))
 		*this = valueRead;
 }
 
-IntVar::IntVar( const std::string& path, int32_t val, int32_t minVal, int32_t maxVal, int32_t stepSize )
+IntVar::IntVar(const std::string& path, int32_t val, int32_t minVal, int32_t maxVal, int32_t stepSize)
 	: EngineVar(path)
 {
 	ASSERT(minVal <= maxVal);
@@ -411,29 +411,29 @@ IntVar::IntVar( const std::string& path, int32_t val, int32_t minVal, int32_t ma
 	m_StepSize = stepSize;
 }
 
-void IntVar::DisplayValue( TextContext& Text ) const
+void IntVar::DisplayValue(FreeTypeTextContext& Text) const
 {
 	Text.DrawFormattedString("%-11d", m_Value);
 }
 
-std::string IntVar::ToString( void ) const
+std::string IntVar::ToString(void) const
 {
 	char buf[128];
 	sprintf_s(buf, "%d", m_Value);
 	return buf;
-} 
+}
 
-void IntVar::SetValue(FILE* file, const std::string& setting) 
+void IntVar::SetValue(FILE* file, const std::string& setting)
 {
 	std::string scanString = "\n" + setting + ": %d";
 	int32_t valueRead;
-	
+
 	if (fscanf_s(file, scanString.c_str(), &valueRead))
 		*this = valueRead;
 }
 
 
-EnumVar::EnumVar( const std::string& path, int32_t initialVal, int32_t listLength, const char** listLabels )
+EnumVar::EnumVar(const std::string& path, int32_t initialVal, int32_t listLength, const char** listLabels)
 	: EngineVar(path)
 {
 	ASSERT(listLength > 0);
@@ -442,28 +442,28 @@ EnumVar::EnumVar( const std::string& path, int32_t initialVal, int32_t listLengt
 	m_Value = Clamp(initialVal);
 }
 
-void EnumVar::DisplayValue( TextContext& Text ) const
+void EnumVar::DisplayValue(FreeTypeTextContext& Text) const
 {
 	Text.DrawString(m_EnumLabels[m_Value]);
 }
 
-std::string EnumVar::ToString( void ) const
+std::string EnumVar::ToString(void) const
 {
 	return m_EnumLabels[m_Value];
-} 
+}
 
-void EnumVar::SetValue(FILE* file, const std::string& setting) 
+void EnumVar::SetValue(FILE* file, const std::string& setting)
 {
 	std::string scanString = "\n" + setting + ": %[^\n]";
 	char valueRead[14];
-		
+
 	if (fscanf_s(file, scanString.c_str(), valueRead, _countof(valueRead)) == 1)
 	{
 		std::string valueReadStr = valueRead;
 		valueReadStr = valueReadStr.substr(0, valueReadStr.length() - 1);
 
 		//if we don't find the string, then leave m_EnumLabes[m_Value] as default
-		for(int32_t i = 0; i < m_EnumLength; ++i)
+		for (int32_t i = 0; i < m_EnumLength; ++i)
 		{
 			if (m_EnumLabels[i] == valueReadStr)
 			{
@@ -475,7 +475,7 @@ void EnumVar::SetValue(FILE* file, const std::string& setting)
 
 }
 
-CallbackTrigger::CallbackTrigger( const std::string& path, std::function<void (void*)> callback, void* args )
+CallbackTrigger::CallbackTrigger(const std::string& path, std::function<void(void*)> callback, void* args)
 	: EngineVar(path)
 {
 	m_Callback = callback;
@@ -483,7 +483,7 @@ CallbackTrigger::CallbackTrigger( const std::string& path, std::function<void (v
 	m_BangDisplay = 0;
 }
 
-void CallbackTrigger::DisplayValue( TextContext& Text ) const
+void CallbackTrigger::DisplayValue(FreeTypeTextContext& Text) const
 {
 	static const char s_animation[] = { '-', '\\', '|', '/' };
 	Text.DrawFormattedString("[%c]", s_animation[(m_BangDisplay >> 3) & 3]);
@@ -492,7 +492,7 @@ void CallbackTrigger::DisplayValue( TextContext& Text ) const
 		--m_BangDisplay;
 }
 
-void CallbackTrigger::SetValue(FILE* file, const std::string& setting) 
+void CallbackTrigger::SetValue(FILE* file, const std::string& setting)
 {
 	//Skip over setting without reading anything
 	std::string scanString = "\n" + setting + ": %[^\n]";
@@ -503,7 +503,7 @@ void CallbackTrigger::SetValue(FILE* file, const std::string& setting)
 //=====================================================================================================================
 // EngineTuning namespace methods
 
-void EngineTuning::Initialize( void )
+void EngineTuning::Initialize(void)
 {
 
 	for (int32_t i = 0; i < s_UnregisteredCount; ++i)
@@ -516,7 +516,7 @@ void EngineTuning::Initialize( void )
 
 }
 
-void HandleDigitalButtonPress( GameInput::DigitalInput button, float timeDelta, std::function<void ()> action )
+void HandleDigitalButtonPress(GameInput::DigitalInput button, float timeDelta, std::function<void()> action)
 {
 	if (!GameInput::IsPressed(button))
 		return;
@@ -540,10 +540,10 @@ void HandleDigitalButtonPress( GameInput::DigitalInput button, float timeDelta, 
 		action();
 }
 
-void EngineTuning::Update( float frameTime )
+void EngineTuning::Update(float frameTime)
 {
-	if (GameInput::IsFirstPressed( GameInput::kBackButton )
-		|| GameInput::IsFirstPressed( GameInput::kKey_back ))
+	if (GameInput::IsFirstPressed(GameInput::kBackButton)
+		|| GameInput::IsFirstPressed(GameInput::kKey_back))
 		sm_IsVisible = !sm_IsVisible;
 
 	if (!sm_IsVisible)
@@ -556,18 +556,18 @@ void EngineTuning::Update( float frameTime )
 		return;
 
 	// Detect a DPad button press
-	HandleDigitalButtonPress(GameInput::kDPadRight, frameTime, []{ sm_SelectedVariable->Increment(); } );
-	HandleDigitalButtonPress(GameInput::kDPadLeft,	frameTime, []{ sm_SelectedVariable->Decrement(); } );
-	HandleDigitalButtonPress(GameInput::kDPadDown,	frameTime, []{ sm_SelectedVariable = sm_SelectedVariable->NextVar(); } );
-	HandleDigitalButtonPress(GameInput::kDPadUp,	frameTime, []{ sm_SelectedVariable = sm_SelectedVariable->PrevVar(); } );
+	HandleDigitalButtonPress(GameInput::kDPadRight, frameTime, [] { sm_SelectedVariable->Increment(); });
+	HandleDigitalButtonPress(GameInput::kDPadLeft, frameTime, [] { sm_SelectedVariable->Decrement(); });
+	HandleDigitalButtonPress(GameInput::kDPadDown, frameTime, [] { sm_SelectedVariable = sm_SelectedVariable->NextVar(); });
+	HandleDigitalButtonPress(GameInput::kDPadUp, frameTime, [] { sm_SelectedVariable = sm_SelectedVariable->PrevVar(); });
 
-	HandleDigitalButtonPress(GameInput::kKey_right, frameTime, []{ sm_SelectedVariable->Increment(); } );
-	HandleDigitalButtonPress(GameInput::kKey_left,	frameTime, []{ sm_SelectedVariable->Decrement(); } );
-	HandleDigitalButtonPress(GameInput::kKey_down,	frameTime, []{ sm_SelectedVariable = sm_SelectedVariable->NextVar(); } );
-	HandleDigitalButtonPress(GameInput::kKey_up,	frameTime, []{ sm_SelectedVariable = sm_SelectedVariable->PrevVar(); } );
+	HandleDigitalButtonPress(GameInput::kKey_right, frameTime, [] { sm_SelectedVariable->Increment(); });
+	HandleDigitalButtonPress(GameInput::kKey_left, frameTime, [] { sm_SelectedVariable->Decrement(); });
+	HandleDigitalButtonPress(GameInput::kKey_down, frameTime, [] { sm_SelectedVariable = sm_SelectedVariable->NextVar(); });
+	HandleDigitalButtonPress(GameInput::kKey_up, frameTime, [] { sm_SelectedVariable = sm_SelectedVariable->PrevVar(); });
 
-	if (GameInput::IsFirstPressed( GameInput::kAButton )
-		|| GameInput::IsFirstPressed( GameInput::kKey_return ))
+	if (GameInput::IsFirstPressed(GameInput::kAButton)
+		|| GameInput::IsFirstPressed(GameInput::kKey_return))
 	{
 		sm_SelectedVariable->Bang();
 	}
@@ -579,12 +579,12 @@ void StartSave(void*)
 	fopen_s(&settingsFile, "engineTuning.txt", "wb");
 	if (settingsFile != nullptr)
 	{
-		VariableGroup::sm_RootGroup.SaveToFile(settingsFile, 2 );
+		VariableGroup::sm_RootGroup.SaveToFile(settingsFile, 2);
 		fclose(settingsFile);
 	}
 }
 std::function<void(void*)> StartSaveFunc = StartSave;
-static CallbackTrigger Save("Save Settings", StartSaveFunc, nullptr); 
+static CallbackTrigger Save("Save Settings", StartSaveFunc, nullptr);
 
 void StartLoad(void*)
 {
@@ -597,33 +597,19 @@ void StartLoad(void*)
 	}
 }
 std::function<void(void*)> StartLoadFunc = StartLoad;
-static CallbackTrigger Load("Load Settings", StartLoadFunc, nullptr); 
+static CallbackTrigger Load("Load Settings", StartLoadFunc, nullptr);
 
 
-void EngineTuning::Display( GraphicsContext& Context, float x, float y, float w, float h )
+void EngineTuning::Display(GraphicsContext& Context, float x, float y, float w, float h)
 {
-	GraphRenderer::RenderGraphs(Context, GraphRenderer::GraphType::Profile);
-
-#if 1
-	{
-		FreeTypeTextContext Text(Context, w, h);
-		Text.Begin();
-
-		Text.ResetCursor(100, 100);
-		Text.DrawString(L"You can use bookmarks to mark lines in your code so that you can quickly return to a specific location and jump back and forth between locations.\n"
-			L"Bookmark commands and icons are available in two places : the bookmark window(View / Bookmark Window) and the text editor toolbar.\n"
-			L"(서울=연합뉴스) 이정진 기자 = 한미 군 당국이 경북 성주에 미국의 고고도 미사일방어체계(THAAD·사드)를 배치한다고 결정한 것은 군사적 효용성은 물론이고 주민안전과 중국의 반발 등까지 두루 고려한 조치로 풀이된다.");
-
-		Text.End();
-	}
-#endif // 0
-
-	TextContext Text(Context);
+	FreeTypeTextContext Text(Context, w, h);
 	Text.Begin();
+
+	GraphRenderer::RenderGraphs(Context, Text, GraphRenderer::GraphType::Profile);
 
 	EngineProfiling::DisplayFrameRate(Text);
 
-	Text.ResetCursor( x, y );
+	Text.ResetCursor(x, y);
 
 	if (!sm_IsVisible)
 	{
@@ -636,21 +622,23 @@ void EngineTuning::Display( GraphicsContext& Context, float x, float y, float w,
 
 	Context.SetScissor((uint32_t)Floor(x), (uint32_t)Floor(y), (uint32_t)Ceiling(x + w), (uint32_t)Ceiling(y + h));
 
-	Text.ResetCursor(x, y - s_ScrollOffset );
-	Text.SetColor( Color(0.5f, 1.0f, 1.0f) );
+	Text.ResetCursor(x, y - s_ScrollOffset);
+	Text.SetColor(Color(0.5f, 1.0f, 1.0f));
 	Text.DrawString("Engine Tuning\n");
+#if 0
 	Text.SetTextSize(20.0f);
+#endif
 
-	VariableGroup::sm_RootGroup.Display( Text, x, sm_SelectedVariable );
-	
-	EngineProfiling::DisplayPerfGraph(Context);
+	VariableGroup::sm_RootGroup.Display(Text, x, sm_SelectedVariable);
+
+	EngineProfiling::DisplayPerfGraph(Context, Text);
 
 	Text.End();
 
 	Context.SetScissor(0, 0, 1920, 1080);
 }
 
-void EngineTuning::AddToVariableGraph( const string& path, EngineVar& var )
+void EngineTuning::AddToVariableGraph(const string& path, EngineVar& var)
 {
 	vector<string> separatedPath;
 	string leafName;
@@ -673,7 +661,7 @@ void EngineTuning::AddToVariableGraph( const string& path, EngineVar& var )
 
 	VariableGroup* group = &VariableGroup::sm_RootGroup;
 
-	for (auto iter = separatedPath.begin(); iter != separatedPath.end(); ++iter )
+	for (auto iter = separatedPath.begin(); iter != separatedPath.end(); ++iter)
 	{
 		VariableGroup* nextGroup;
 		EngineVar* node = group->FindChild(*iter);
@@ -694,7 +682,7 @@ void EngineTuning::AddToVariableGraph( const string& path, EngineVar& var )
 	group->AddChild(leafName, var);
 }
 
-void EngineTuning::RegisterVariable( const std::string& path, EngineVar& var )
+void EngineTuning::RegisterVariable(const std::string& path, EngineVar& var)
 {
 	if (s_UnregisteredCount >= 0)
 	{
@@ -704,11 +692,11 @@ void EngineTuning::RegisterVariable( const std::string& path, EngineVar& var )
 	}
 	else
 	{
-		AddToVariableGraph( path, var );
+		AddToVariableGraph(path, var);
 	}
 }
 
-bool EngineTuning::IsFocused( void )
+bool EngineTuning::IsFocused(void)
 {
 	return sm_IsVisible;
 }

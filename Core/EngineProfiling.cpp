@@ -14,7 +14,6 @@
 #include "pch.h"
 #include "SystemTime.h"
 #include "GraphicsCore.h"
-#include "TextRenderer.h"
 #include "GraphRenderer.h"
 #include "GameInput.h"
 #include "GpuTimeManager.h"
@@ -48,7 +47,7 @@ public:
 		m_Maximum = 0.0f;
 	}
 
-	void RecordStat( uint32_t FrameIndex, float Value )
+	void RecordStat(uint32_t FrameIndex, float Value)
 	{
 		m_RecentHistory[FrameIndex % kHistorySize] = Value;
 		m_ExtendedHistory[FrameIndex % kExtendedHistorySize] = Value;
@@ -103,7 +102,7 @@ public:
 	{
 	}
 
-	void SetColor( Color Col )
+	void SetColor(Color Col)
 	{
 		m_PlotColor = Col;
 	}
@@ -131,16 +130,16 @@ public:
 		m_Window = Window;
 	}
 
-	uint32_t AddPlot( const StatPlot& P )
+	uint32_t AddPlot(const StatPlot& P)
 	{
 		uint32_t Idx = (uint32_t)m_Stats.size();
 		m_Stats.push_back(P);
 		return Idx;
 	}
 
-	StatPlot& GetPlot( uint32_t Handle );
+	StatPlot& GetPlot(uint32_t Handle);
 
-	void Draw( GraphicsContext& Context );
+	void Draw(GraphicsContext& Context);
 
 private:
 	wstring m_Label;
@@ -194,10 +193,10 @@ private:
 class NestedTimingTree
 {
 public:
-	NestedTimingTree( const wstring& name, NestedTimingTree* parent = nullptr )
+	NestedTimingTree(const wstring& name, NestedTimingTree* parent = nullptr)
 		: m_Name(name), m_Parent(parent), m_IsExpanded(false), m_IsGraphed(false), m_GraphHandle(PERF_GRAPH_ERROR) {}
 
-	NestedTimingTree* GetChild( const wstring& name )
+	NestedTimingTree* GetChild(const wstring& name)
 	{
 		auto iter = m_LUT.find(name);
 		if (iter != m_LUT.end())
@@ -209,7 +208,7 @@ public:
 		return node;
 	}
 
-	NestedTimingTree* NextScope( void )
+	NestedTimingTree* NextScope(void)
 	{
 		if (m_IsExpanded && m_Children.size() > 0)
 			return m_Children[0];
@@ -217,18 +216,18 @@ public:
 		return m_Parent->NextChild(this);
 	}
 
-	NestedTimingTree* PrevScope( void )
+	NestedTimingTree* PrevScope(void)
 	{
 		NestedTimingTree* prev = m_Parent->PrevChild(this);
 		return prev == m_Parent ? prev : prev->LastChild();
 	}
 
-	NestedTimingTree* FirstChild( void )
+	NestedTimingTree* FirstChild(void)
 	{
 		return m_Children.size() == 0 ? nullptr : m_Children[0];
 	}
 
-	NestedTimingTree* LastChild( void )
+	NestedTimingTree* LastChild(void)
 	{
 		if (!m_IsExpanded || m_Children.size() == 0)
 			return this;
@@ -236,7 +235,7 @@ public:
 		return m_Children.back()->LastChild();
 	}
 
-	NestedTimingTree* NextChild( NestedTimingTree* curChild )
+	NestedTimingTree* NextChild(NestedTimingTree* curChild)
 	{
 		ASSERT(curChild->m_Parent == this);
 
@@ -256,7 +255,7 @@ public:
 			return &sm_RootScope;
 	}
 
-	NestedTimingTree* PrevChild( NestedTimingTree* curChild )
+	NestedTimingTree* PrevChild(NestedTimingTree* curChild)
 	{
 		ASSERT(curChild->m_Parent == this);
 
@@ -281,7 +280,7 @@ public:
 		return nullptr;
 	}
 
-	void StartTiming( CommandContext* Context )
+	void StartTiming(CommandContext* Context)
 	{
 		m_StartTick = SystemTime::GetCurrentTick();
 		if (Context == nullptr)
@@ -292,7 +291,7 @@ public:
 		Context->PIXBeginEvent(m_Name.c_str());
 	}
 
-	void StopTiming( CommandContext* Context )
+	void StopTiming(CommandContext* Context)
 	{
 		m_EndTick = SystemTime::GetCurrentTick();
 		if (Context == nullptr)
@@ -336,10 +335,10 @@ public:
 		}
 	}
 
-	static void PushProfilingMarker( const wstring& name, CommandContext* Context );
-	static void PopProfilingMarker( CommandContext* Context );
-	static void Update( void );
-	static void UpdateTimes( void )
+	static void PushProfilingMarker(const wstring& name, CommandContext* Context);
+	static void PopProfilingMarker(CommandContext* Context);
+	static void Update(void);
+	static void UpdateTimes(void)
 	{
 		uint32_t FrameIndex = (uint32_t)Graphics::GetFrameCount();
 
@@ -360,7 +359,7 @@ public:
 	static float GetTotalGpuTime(void) { return s_TotalGpuTime.GetAvg(); }
 	static float GetFrameDelta(void) { return s_FrameDelta.GetAvg(); }
 
-	static void Display( TextContext& Text, float x )
+	static void Display(FreeTypeTextContext& Text, float x)
 	{
 		float curX = Text.GetCursorX();
 		Text.DrawString("  ");
@@ -368,23 +367,23 @@ public:
 		float originalCursorY = Text.GetCursorY();
 		float indent = originalCursorX - curX;
 		Text.SetCursorX(curX);
-		sm_RootScope.DisplayNode( Text, x - indent, indent );
+		sm_RootScope.DisplayNode(Text, x - indent, indent);
 		sm_RootScope.StoreToGraph();
 	}
 
 	void Toggle()
-	{ 
+	{
 		//if (m_GraphHandle == PERF_GRAPH_ERROR)
 		//	m_GraphHandle = GraphRenderer::InitGraph(GraphType::Profile);
 		//m_IsGraphed = GraphRenderer::ManageGraphs(m_GraphHandle, GraphType::Profile);
 	}
-	bool IsGraphed(){ return m_IsGraphed;}
+	bool IsGraphed() { return m_IsGraphed; }
 
 private:
 
-	void DisplayNode( TextContext& Text, float x, float indent );
+	void DisplayNode(FreeTypeTextContext& Text, float x, float indent);
 	void StoreToGraph(void);
-	void DeleteChildren( void )
+	void DeleteChildren(void)
 	{
 		for (auto node : m_Children)
 			delete node;
@@ -427,11 +426,11 @@ namespace EngineProfiling
 	BoolVar DrawProfiler("Display Profiler", false);
 	//BoolVar DrawPerfGraph("Display Performance Graph", false);
 	const bool DrawPerfGraph = false;
-	
-	void Update( void )
+
+	void Update(void)
 	{
-		if (GameInput::IsFirstPressed( GameInput::kStartButton ) 
-			|| GameInput::IsFirstPressed( GameInput::kKey_space ))
+		if (GameInput::IsFirstPressed(GameInput::kStartButton)
+			|| GameInput::IsFirstPressed(GameInput::kKey_space))
 		{
 			Paused = !Paused;
 		}
@@ -453,26 +452,26 @@ namespace EngineProfiling
 		return Paused;
 	}
 
-	void DisplayFrameRate( TextContext& Text )
+	void DisplayFrameRate(FreeTypeTextContext& Text)
 	{
 		if (!DrawFrameRate)
 			return;
-		
-		float cpuTime = NestedTimingTree::GetTotalCpuTime();
-		float gpuTime = NestedTimingTree::GetTotalGpuTime();
-		float frameRate = 1.0f / NestedTimingTree::GetFrameDelta();
 
-		Text.DrawFormattedString( "CPU %7.3f ms, GPU %7.3f ms, %3u Hz\n",
-			cpuTime, gpuTime, (uint32_t)(frameRate + 0.5f));
+		float CpuTime = NestedTimingTree::GetTotalCpuTime();
+		float GpuTime = NestedTimingTree::GetTotalGpuTime();
+		float FrameRate = 1.0f / NestedTimingTree::GetFrameDelta();
+
+		Text.DrawFormattedString(L"CPU %7.3f ms, GPU %7.3f ms, %3u Hz\n",
+			CpuTime, GpuTime, (uint32_t)(FrameRate + 0.5f));
 	}
 
-	void DisplayPerfGraph( GraphicsContext& Context )
+	void DisplayPerfGraph(GraphicsContext& Context, FreeTypeTextContext& Text)
 	{
 		if (DrawPerfGraph)
-			GraphRenderer::RenderGraphs(Context, GraphType::Global );
+			GraphRenderer::RenderGraphs(Context, Text, GraphType::Global);
 	}
 
-	void Display( TextContext& Text, float x, float y, float w, float h )
+	void Display(FreeTypeTextContext& Text, float x, float y, float w, float h)
 	{
 		Text.ResetCursor(x, y);
 
@@ -482,17 +481,23 @@ namespace EngineProfiling
 
 			NestedTimingTree::Update();
 
-			Text.SetColor( Color(0.5f, 1.0f, 1.0f) );
+			Text.SetColor(Color(0.5f, 1.0f, 1.0f));
 			Text.DrawString("Engine Profiling");
 			Text.SetColor(Color(0.8f, 0.8f, 0.8f));
+		#if 0
 			Text.SetTextSize(20.0f);
+		#endif
 			Text.DrawString("           CPU    GPU");
+		#if 0
 			Text.SetTextSize(24.0f);
+		#endif
 			Text.NewLine();
+		#if 0
 			Text.SetTextSize(20.0f);
-			Text.SetColor( Color(1.0f, 1.0f, 1.0f) );
+		#endif
+			Text.SetColor(Color(1.0f, 1.0f, 1.0f));
 
-			NestedTimingTree::Display( Text, x );
+			NestedTimingTree::Display(Text, x);
 		}
 
 		Text.GetCommandContext().SetScissor(0, 0, 1920, 1080);
@@ -500,19 +505,19 @@ namespace EngineProfiling
 
 } // EngineProfiling
 
-void NestedTimingTree::PushProfilingMarker( const wstring& name, CommandContext* Context )
+void NestedTimingTree::PushProfilingMarker(const wstring& name, CommandContext* Context)
 {
 	sm_CurrentNode = sm_CurrentNode->GetChild(name);
 	sm_CurrentNode->StartTiming(Context);
 }
 
-void NestedTimingTree::PopProfilingMarker( CommandContext* Context )
+void NestedTimingTree::PopProfilingMarker(CommandContext* Context)
 {
 	sm_CurrentNode->StopTiming(Context);
 	sm_CurrentNode = sm_CurrentNode->m_Parent;
 }
 
-void NestedTimingTree::Update( void )
+void NestedTimingTree::Update(void)
 {
 	ASSERT(sm_SelectedScope != nullptr, "Corrupted profiling data structure");
 
@@ -523,8 +528,8 @@ void NestedTimingTree::Update( void )
 			return;
 	}
 
-	if (GameInput::IsFirstPressed( GameInput::kDPadLeft )
-		|| GameInput::IsFirstPressed( GameInput::kKey_left ))
+	if (GameInput::IsFirstPressed(GameInput::kDPadLeft)
+		|| GameInput::IsFirstPressed(GameInput::kKey_left))
 	{
 		//if still on graphs go back to text
 		if (sm_CursorOnGraph)
@@ -532,8 +537,8 @@ void NestedTimingTree::Update( void )
 		else
 			sm_SelectedScope->m_IsExpanded = false;
 	}
-	else if (GameInput::IsFirstPressed( GameInput::kDPadRight )
-		|| GameInput::IsFirstPressed( GameInput::kKey_right ))
+	else if (GameInput::IsFirstPressed(GameInput::kDPadRight)
+		|| GameInput::IsFirstPressed(GameInput::kKey_right))
 	{
 		if (sm_SelectedScope->m_IsExpanded == true && !sm_CursorOnGraph)
 			sm_CursorOnGraph = true;
@@ -542,25 +547,25 @@ void NestedTimingTree::Update( void )
 		//if already expanded go over to graphs
 
 	}
-	else if (GameInput::IsFirstPressed( GameInput::kDPadDown )
-		|| GameInput::IsFirstPressed( GameInput::kKey_down ))
+	else if (GameInput::IsFirstPressed(GameInput::kDPadDown)
+		|| GameInput::IsFirstPressed(GameInput::kKey_down))
 	{
 		sm_SelectedScope = sm_SelectedScope ? sm_SelectedScope->NextScope() : nullptr;
 	}
-	else if (GameInput::IsFirstPressed( GameInput::kDPadUp )
-		|| GameInput::IsFirstPressed( GameInput::kKey_up ))
+	else if (GameInput::IsFirstPressed(GameInput::kDPadUp)
+		|| GameInput::IsFirstPressed(GameInput::kKey_up))
 	{
 		sm_SelectedScope = sm_SelectedScope ? sm_SelectedScope->PrevScope() : nullptr;
 	}
-	else if (GameInput::IsFirstPressed( GameInput::kAButton ) 
-		|| GameInput::IsFirstPressed( GameInput::kKey_return ))
+	else if (GameInput::IsFirstPressed(GameInput::kAButton)
+		|| GameInput::IsFirstPressed(GameInput::kKey_return))
 	{
 		sm_SelectedScope->Toggle();
 	}
 
 }
 
-void NestedTimingTree::DisplayNode( TextContext& Text, float leftMargin, float indent )
+void NestedTimingTree::DisplayNode(FreeTypeTextContext& Text, float leftMargin, float indent)
 {
 	if (this == &sm_RootScope)
 	{
@@ -570,10 +575,10 @@ void NestedTimingTree::DisplayNode( TextContext& Text, float leftMargin, float i
 	else
 	{
 		if (sm_SelectedScope == this && !sm_CursorOnGraph)
-			Text.SetColor( Color(1.0f, 1.0f, 0.5f) );
+			Text.SetColor(Color(1.0f, 1.0f, 0.5f));
 		else
-			Text.SetColor( Color(1.0f, 1.0f, 1.0f) );
-	
+			Text.SetColor(Color(1.0f, 1.0f, 1.0f));
+
 
 		Text.SetLeftMargin(leftMargin);
 		Text.SetCursorX(leftMargin);
@@ -608,7 +613,7 @@ void NestedTimingTree::DisplayNode( TextContext& Text, float leftMargin, float i
 void NestedTimingTree::StoreToGraph(void)
 {
 	if (m_GraphHandle != PERF_GRAPH_ERROR)
-		GraphRenderer::Update( XMFLOAT2(m_CpuTime.GetLast(), m_GpuTime.GetLast()), m_GraphHandle, m_IsGraphed, GraphType::Profile);
+		GraphRenderer::Update(XMFLOAT2(m_CpuTime.GetLast(), m_GpuTime.GetLast()), m_GraphHandle, m_IsGraphed, GraphType::Profile);
 
 	for (auto node : m_Children)
 		node->StoreToGraph();
